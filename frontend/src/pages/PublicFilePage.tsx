@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Download, FileArchive } from 'lucide-react'
+import { Download, ExternalLink, FileArchive, FileText, ImageIcon, Play, Table2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { API_URL, apiFetch, formatBytes, formatDate } from '@/lib/api'
+
+declare global {
+  interface Window {
+    Plyr?: new (element: HTMLVideoElement, options?: Record<string, unknown>) => { destroy: () => void }
+    __plyrReady?: Promise<void>
+  }
+}
 
 type PublicFile = { name: string; mimeType: string; sizeBytes: string; createdAt: string }
 
@@ -11,18 +17,82 @@ function previewKind(mimeType: string) {
   if (mimeType.startsWith('image/') || mimeType === 'application/vnd.google-apps.drawing') return 'image'
   if (mimeType.startsWith('video/')) return 'video'
   if (mimeType === 'application/pdf' || mimeType === 'application/vnd.google-apps.document' || mimeType === 'application/vnd.google-apps.presentation') return 'document'
+  if (mimeType === 'application/vnd.google-apps.spreadsheet') return 'sheet'
   return null
 }
 
-export function PublicFilePage() {
+function fileIcon(kind: ReturnType<typeof previewKind>) {
+  if (kind === 'image') return <ImageIcon className="h-5 w-5" />
+  if (kind === 'video') return <Play className="h-5 w-5" />
+  if (kind === 'document') return <FileText className="h-5 w-5" />
+  if (kind === 'sheet') return <Table2 className="h-5 w-5" />
+  return <FileArchive className="h-5 w-5" />
+}
+
+function ensurePlyr() {
+  if (window.Plyr) return Promise.resolve()
+  if (window.__plyrReady) return window.__plyrReady
+
+  window.__plyrReady = new Promise<void>((resolve, reject) => {
+    if (!document.querySelector('link[data-plyr="true"]')) {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.css'
+      link.dataset.plyr = 'true'
+      document.head.appendChild(link)
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-plyr="true"]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Failed to load Plyr')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js'
+    script.async = true
+    script.dataset.plyr = 'true'
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Plyr'))
+    document.body.appendChild(script)
+  })
+
+  return window.__plyrReady
+}
+
+function UnsupportedPreview({ file, downloadUrl }: { file: PublicFile; downloadUrl: string }) {
+  return (
+    <div className="flex h-full min-h-[360px] flex-col items-center justify-center px-6 text-center text-slate-300">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-100 shadow-2xl shadow-black/30">
+        <FileArchive className="h-9 w-9" />
+      </div>
+      <h2 className="mt-6 text-xl font-bold text-white">Preview not available</h2>
+      <p className="mt-2 max-w-md text-sm text-slate-400">{file.name} cannot be previewed in browser. Download file to open it locally.</p>
+      <a href={downloadUrl} download className="mt-6">
+        <Button><Download className="h-4 w-4" />Download</Button>
+      </a>
+    </div>
+  )
+}
+
+export function PublicFilePage({ embed = false }: { embed?: boolean }) {
   const { token } = useParams()
   const [file, setFile] = useState<PublicFile | null>(null)
+  const [failed, setFailed] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const previewUrl = `${API_URL}/public/files/${token}/preview`
   const downloadUrl = `${API_URL}/public/files/${token}/download`
   const kind = file ? previewKind(file.mimeType) : null
 
   useEffect(() => {
-    apiFetch<{ file: PublicFile }>(`/public/files/${token}`, { skipAuth: true }).then((data) => setFile(data.file)).catch(() => setFile(null))
+    setFailed(false)
+    apiFetch<{ file: PublicFile }>(`/public/files/${token}`, { skipAuth: true })
+      .then((data) => setFile(data.file))
+      .catch(() => {
+        setFile(null)
+        setFailed(true)
+      })
   }, [token])
 
   useEffect(() => {
@@ -32,20 +102,79 @@ export function PublicFilePage() {
     }
   }, [file])
 
+  useEffect(() => {
+    if (kind !== 'video' || !videoRef.current) return undefined
+    let disposed = false
+    let player: { destroy: () => void } | null = null
+
+    ensurePlyr().then(() => {
+      if (disposed || !videoRef.current || !window.Plyr) return
+      player = new window.Plyr(videoRef.current, { ratio: '16:9', controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'] })
+    }).catch(() => undefined)
+
+    return () => {
+      disposed = true
+      player?.destroy()
+    }
+  }, [kind, previewUrl])
+
+  if (failed) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0f1117] p-6 text-white">
+        <div className="max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl shadow-black/30">
+          <FileArchive className="mx-auto h-12 w-12 text-slate-400" />
+          <h1 className="mt-5 text-2xl font-extrabold">Shared file not found</h1>
+          <p className="mt-2 text-sm text-slate-400">Link may be expired, disabled, or deleted.</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!file) {
+    return <main className="flex min-h-screen items-center justify-center bg-[#0f1117] text-sm font-semibold text-slate-400">Loading shared file...</main>
+  }
+
+  const preview = (
+    <div className="flex h-full w-full items-center justify-center">
+      {kind === 'image' ? <img src={previewUrl} alt={file.name} className="max-h-full max-w-full object-contain shadow-2xl shadow-black/30" /> : null}
+      {kind === 'video' ? <video ref={videoRef} src={previewUrl} controls playsInline className="w-full max-w-6xl rounded-xl bg-black shadow-2xl shadow-black/40" /> : null}
+      {kind === 'document' ? <iframe src={previewUrl} title={file.name} className="h-full w-full border-0 bg-white" /> : null}
+      {kind === 'sheet' || !kind ? <UnsupportedPreview file={file} downloadUrl={downloadUrl} /> : null}
+    </div>
+  )
+
+  if (embed) {
+    return <main className="h-screen overflow-hidden bg-black text-white">{preview}</main>
+  }
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
-      <Card className="w-full max-w-2xl p-6">
-        {file ? <>
-          <div className="flex items-start gap-4"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white"><FileArchive className="h-7 w-7" /></div><div className="min-w-0 flex-1"><h1 className="truncate text-2xl font-extrabold">{file.name}</h1><p className="mt-1 text-sm text-slate-500">{formatBytes(file.sizeBytes)} • Uploaded {formatDate(file.createdAt)}</p></div></div>
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-            {kind === 'image' ? <img src={previewUrl} alt={file.name} className="max-h-[60vh] w-full object-contain" /> : null}
-            {kind === 'video' ? <video src={previewUrl} controls className="max-h-[60vh] w-full" /> : null}
-            {kind === 'document' ? <iframe src={previewUrl} title={file.name} className="h-[60vh] w-full" /> : null}
-            {!kind ? <div className="p-8 text-center text-sm text-slate-500">Preview not available for this file type.</div> : null}
+    <main className="min-h-screen overflow-hidden bg-[#101218] text-white">
+      <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#17191f]/95 px-4 shadow-lg shadow-black/20 backdrop-blur sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-100">
+            {fileIcon(kind)}
           </div>
-          <a href={downloadUrl} download><Button className="mt-6 w-full"><Download className="h-4 w-4" />Download</Button></a>
-        </> : <p className="text-center text-sm text-slate-500">Shared file not found.</p>}
-      </Card>
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-bold text-white sm:text-base">{file.name}</h1>
+            <p className="truncate text-xs text-slate-400">{formatBytes(file.sizeBytes)} • Uploaded {formatDate(file.createdAt)}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <a href={`/public/files/${token}/embed`} target="_blank" rel="noreferrer" className="hidden sm:block">
+            <Button variant="ghost" className="text-slate-100 hover:bg-white/10"><ExternalLink className="h-4 w-4" />Embed</Button>
+          </a>
+          <a href={downloadUrl} download>
+            <Button variant="outline" className="border-white/10 bg-white/10 text-white hover:bg-white/15"><Download className="h-4 w-4" />Download</Button>
+          </a>
+        </div>
+      </header>
+
+      <section className="flex h-screen items-center justify-center px-3 pb-6 pt-20 sm:px-6">
+        <div className="relative h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d12] shadow-2xl shadow-black/40">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/[0.06] to-transparent" />
+          {preview}
+        </div>
+      </section>
     </main>
   )
 }

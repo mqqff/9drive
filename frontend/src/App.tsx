@@ -20,6 +20,7 @@ function App() {
       <Route path="register" element={<RegisterPage />} />
       <Route path="google-connected" element={<GoogleConnectedPage />} />
       <Route path="public/files/:token" element={<PublicFilePage />} />
+      <Route path="public/files/:token/embed" element={<PublicFilePage embed />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<DriveLayout />}>
           <Route index element={<Navigate to="/all-files" replace />} />
