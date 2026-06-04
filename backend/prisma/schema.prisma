@@ -25,6 +25,7 @@ model User {
   folders        Folder[]
   uploadSessions UploadSession[]
   auditLogs      AuditLog[]
+  workspaceInvitesSent WorkspaceInvite[] @relation("WorkspaceInvitesSent")
 
   @@map("users")
 }
@@ -239,4 +240,21 @@ model AuditLog {
 
   @@index([userId])
   @@map("audit_logs")
+}
+
+model WorkspaceInvite {
+  id           String    @id @default(uuid()) @db.Char(36)
+  inviterId    String    @map("inviter_id") @db.Char(36)
+  inviteeEmail String    @map("invitee_email") @db.VarChar(191)
+  role         String    @default("viewer") @db.VarChar(32)
+  status       String    @default("pending") @db.VarChar(32)
+  revokedAt    DateTime? @map("revoked_at")
+  acceptedAt   DateTime? @map("accepted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  inviter      User      @relation("WorkspaceInvitesSent", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@unique([inviterId, inviteeEmail])
+  @@index([inviteeEmail])
+  @@map("workspace_invites")
 }

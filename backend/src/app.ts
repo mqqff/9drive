@@ -10,6 +10,7 @@ import { uploadRouter } from './modules/uploads/upload.routes.js'
 import { fileRouter } from './modules/files/file.routes.js'
 import { folderRouter } from './modules/folders/folder.routes.js'
 import { publicRouter } from './modules/public/public.routes.js'
+import { inviteRouter } from './modules/invites/invite.routes.js'
 
 export const app = express()
 
@@ -25,4 +26,5 @@ app.use('/storage', storageRouter)
 app.use('/uploads', uploadRouter)
 app.use('/files', fileRouter)
 app.use('/folders', folderRouter)
+app.use('/invites', inviteRouter)
 app.use(errorMiddleware)

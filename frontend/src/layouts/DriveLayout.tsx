@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -120,6 +120,10 @@ export function DriveLayout() {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser())
   const [storage, setStorage] = useState<StorageSummary | null>(null)
   const [breakdown, setBreakdown] = useState<StorageBreakdown>({ photo: 0, video: 0, document: 0 })
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('viewer')
+  const [inviteMessage, setInviteMessage] = useState('')
+  const [inviting, setInviting] = useState(false)
 
   async function loadSidebarStats() {
     await Promise.all([
@@ -153,6 +157,23 @@ export function DriveLayout() {
     await apiFetch('/auth/logout', { method: 'POST' }).catch(() => undefined)
     clearAuthSession()
     navigate('/login')
+  }
+
+  async function sendInvite(event: FormEvent) {
+    event.preventDefault()
+    setInviting(true)
+    setInviteMessage('')
+    try {
+      await apiFetch('/invites', { method: 'POST', body: JSON.stringify({ email: inviteEmail, role: inviteRole }) })
+      setInviteEmail('')
+      setInviteRole('viewer')
+      setInviteMessage('Invite saved. Member will appear in Shared.')
+      window.dispatchEvent(new Event('9drive:invites-changed'))
+    } catch (error) {
+      setInviteMessage(error instanceof Error ? error.message : 'Failed to send invite')
+    } finally {
+      setInviting(false)
+    }
   }
 
   return (
@@ -194,12 +215,13 @@ export function DriveLayout() {
           <Outlet />
         </section>
       </div>
-      <DummyModal open={inviteOpen} title="Invite Members" description="Dummy invite form for sharing workspace access." onClose={() => setInviteOpen(false)}>
-        <div className="grid gap-4">
-          <label className="grid gap-2 text-sm font-semibold">Email Address<Input placeholder="member@example.com" /></label>
-          <label className="grid gap-2 text-sm font-semibold">Role<Input defaultValue="Can view and comment" /></label>
-          <div className="flex justify-end gap-3 pt-2"><Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button><Button onClick={() => setInviteOpen(false)}>Send Invite</Button></div>
-        </div>
+      <DummyModal open={inviteOpen} title="Invite Members" description="Invite a member to your 9Drive workspace." onClose={() => setInviteOpen(false)}>
+        <form onSubmit={sendInvite} className="grid gap-4">
+          <label className="grid gap-2 text-sm font-semibold">Email Address<Input type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="member@example.com" required /></label>
+          <label className="grid gap-2 text-sm font-semibold">Role<select className="h-11 rounded-xl border border-slate-200 px-3 text-sm" value={inviteRole} onChange={(event) => setInviteRole(event.target.value)}><option value="viewer">Can view</option><option value="editor">Can edit</option></select></label>
+          {inviteMessage ? <p className="rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-700">{inviteMessage}</p> : null}
+          <div className="flex justify-end gap-3 pt-2"><Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button><Button disabled={inviting}>{inviting ? 'Sending...' : 'Send Invite'}</Button></div>
+        </form>
       </DummyModal>
     </main>
   )
