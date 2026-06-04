@@ -56,6 +56,24 @@ folderRouter.post('/', async (req: AuthRequest, res, next) => {
   }
 })
 
+folderRouter.patch('/:id', async (req: AuthRequest, res, next) => {
+  try {
+    const body = createSchema.partial().parse(req.body)
+    const folder = await prisma.folder.updateMany({
+      where: { id: String(req.params.id), userId: req.user!.id, deletedAt: null },
+      data: { ...(body.name ? { name: body.name } : {}), ...(body.color ? { color: body.color } : {}) },
+    })
+    if (folder.count === 0) return res.status(404).json({ code: 'FOLDER_NOT_FOUND', message: 'Folder not found.' })
+    const updated = await prisma.folder.findFirstOrThrow({
+      where: { id: String(req.params.id), userId: req.user!.id },
+      select: { id: true, name: true, color: true, createdAt: true, updatedAt: true },
+    })
+    return res.json({ folder: serializeFolder(updated) })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 folderRouter.delete('/:id', async (req: AuthRequest, res, next) => {
   try {
     await prisma.folder.updateMany({ where: { id: String(req.params.id), userId: req.user!.id }, data: { deletedAt: new Date() } })

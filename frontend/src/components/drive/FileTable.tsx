@@ -4,7 +4,7 @@ import { AvatarStack } from '@/components/drive/AvatarStack'
 import { FileIcon } from '@/components/drive/FileIcon'
 import type { FileItem } from '@/data/drive-data'
 
-export function FileTable({ files, mode = 'default', onFileContextMenu }: { files: FileItem[]; mode?: 'default' | 'shared' | 'recent' | 'starred' | 'archived'; onFileContextMenu?: (event: MouseEvent<HTMLTableRowElement>, file: FileItem) => void }) {
+export function FileTable({ files, mode = 'default', onFileContextMenu }: { files: FileItem[]; mode?: 'default' | 'shared' | 'recent' | 'starred' | 'archived'; onFileContextMenu?: (event: MouseEvent<HTMLElement>, file: FileItem) => void }) {
   return (
     <div className="mt-5 overflow-x-auto">
       <table className="w-full min-w-[760px] border-collapse text-left text-sm">
@@ -39,7 +39,7 @@ export function FileTable({ files, mode = 'default', onFileContextMenu }: { file
               <td className="py-4 text-slate-500">{mode === 'archived' ? file.location : file.date}</td>
               <td className="py-4 text-slate-500">{file.size}</td>
               <td className="py-4 text-slate-500"><span className="flex items-center gap-3"><AvatarStack count={file.shared} />{file.access}</span></td>
-              <td className="py-4 text-right"><MoreVertical className="ml-auto h-5 w-5 text-slate-500" /></td>
+              <td className="py-4 text-right"><button className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100" onClick={(event) => onFileContextMenu?.(event, file)} aria-label={`Open ${file.name} menu`}><MoreVertical className="h-5 w-5" /></button></td>
             </tr>
           ))}
         </tbody>
