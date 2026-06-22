@@ -7,7 +7,6 @@ import {
   Gauge,
   LogOut,
   Menu,
-  MoreVertical,
   Search,
   Settings,
   Share2,
@@ -70,30 +69,50 @@ function RepoUpdatesDropdown({ updates, loading, error }: { updates: RepoUpdate[
         <p className="text-sm font-extrabold text-slate-950">Repository Updates</p>
         <p className="text-xs text-slate-500">Latest commits from zenhosta/9drive</p>
       </div>
+
       <div className="max-h-96 overflow-y-auto p-2">
         {loading ? <p className="p-4 text-sm text-slate-500">Loading updates...</p> : null}
         {error ? <p className="p-4 text-sm text-red-600">{error}</p> : null}
         {!loading && !error && updates.length === 0 ? <p className="p-4 text-sm text-slate-500">No updates found.</p> : null}
-        {!loading && !error ? updates.map((update) => (
-          <a key={update.sha} href={update.url} target="_blank" rel="noreferrer" className="block rounded-xl p-3 transition hover:bg-slate-50">
-            <div className="flex items-start justify-between gap-3">
-              <p className="line-clamp-2 min-w-0 text-sm font-bold leading-snug text-slate-950">{update.title}</p>
-              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{update.sha}</span>
-            </div>
-            <p className="mt-1 truncate text-xs text-slate-500">{update.author} • {update.date}</p>
-          </a>
-        )) : null}
+
+        {!loading && !error
+          ? updates.map((update) => (
+              <a key={update.sha} href={update.url} target="_blank" rel="noreferrer" className="block rounded-xl p-3 transition hover:bg-slate-50">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="line-clamp-2 min-w-0 text-sm font-bold leading-snug text-slate-950">{update.title}</p>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{update.sha}</span>
+                </div>
+                <p className="mt-1 truncate text-xs text-slate-500">{update.author} • {update.date}</p>
+              </a>
+            ))
+          : null}
       </div>
-      <a href="https://github.com/zenhosta/9drive" target="_blank" rel="noreferrer" className="block border-t border-slate-200 px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50">View repository</a>
+
+      <a href="https://github.com/zenhosta/9drive" target="_blank" rel="noreferrer" className="block border-t border-slate-200 px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50">
+        View repository
+      </a>
     </div>
   )
 }
 
-function Sidebar({ onNavigate, user, storage, breakdown, onLogout }: { onNavigate?: () => void; user: AuthUser | null; storage: StorageSummary | null; breakdown: StorageBreakdown; onLogout: () => void }) {
+function Sidebar({
+  onNavigate,
+  user,
+  storage,
+  breakdown,
+  onLogout,
+}: {
+  onNavigate?: () => void
+  user: AuthUser | null
+  storage: StorageSummary | null
+  breakdown: StorageBreakdown
+  onLogout: () => void
+}) {
   const used = Number(storage?.usedBytes ?? 0)
   const total = Number(storage?.totalBytes ?? 0)
   const progress = total > 0 ? Math.min(100, (used / total) * 100) : 0
   const [profileImageUrl, setProfileImageUrl] = useState('')
+
   const items = [
     ['Photo', formatBytes(breakdown.photo), 'bg-lime-500'],
     ['Video', formatBytes(breakdown.video), 'bg-yellow-400'],
@@ -106,55 +125,98 @@ function Sidebar({ onNavigate, user, storage, breakdown, onLogout }: { onNavigat
   }, [user?.email])
 
   return (
-    <aside className="flex h-full w-72 flex-col border-slate-200 bg-white p-5 lg:border-r">
-      <div className="flex items-center gap-3 pb-5">
+    <aside className="flex h-screen w-72 flex-col overflow-hidden border-slate-200 bg-white p-5 lg:border-r">
+      <div className="flex shrink-0 items-center gap-3 pb-5">
         <BrandLogo />
         <span className="text-2xl font-extrabold tracking-tight">9Drive</span>
       </div>
 
-      <div className="flex items-center gap-3 border-y border-slate-200 py-5">
+      <div className="flex shrink-0 items-center gap-3 border-y border-slate-200 py-5">
         <img src={profileImageUrl} alt="User avatar" className="h-10 w-10 rounded-full object-cover" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-bold">{user?.name ?? 'User'}</p>
           <p className="truncate text-sm text-slate-500">{user?.email ?? 'Loading...'}</p>
         </div>
-        <MoreVertical className="h-5 w-5 text-slate-500" />
+        {/* <MoreVertical className="h-5 w-5 text-slate-500" /> */}
       </div>
 
-      <nav className="mt-6 grid gap-2">
-        {menu.map((item) => item.disabled ? (
-          <button key={item.label} type="button" disabled className="inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-xl px-4 text-sm font-semibold text-slate-400 opacity-70">
-            <item.icon className="h-5 w-5" />
-            {item.label}
-          </button>
-        ) : (
-          <NavLink key={item.label} to={item.href} onClick={onNavigate} className={({ isActive }) => cn('inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all', isActive ? 'bg-slate-100 text-slate-950 shadow-sm' : 'text-slate-700 hover:bg-slate-100')}>
-            <item.icon className="h-5 w-5" />
-            {item.label}
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <nav className="mt-6 grid gap-2">
+          {menu.map((item) =>
+            item.disabled ? (
+              <button key={item.label} type="button" disabled className="inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-xl px-4 text-sm font-semibold text-slate-400 opacity-70">
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </button>
+            ) : (
+              <NavLink
+                key={item.label}
+                to={item.href}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cn(
+                    'inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all',
+                    isActive ? 'bg-slate-100 text-slate-950 shadow-sm' : 'text-slate-700 hover:bg-slate-100',
+                  )
+                }
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </NavLink>
+            ),
+          )}
+        </nav>
+
+        <div className="mt-5 border-t border-slate-200 pt-5">
+          <NavLink
+            to="/settings"
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                'inline-flex h-11 w-full items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all',
+                isActive ? 'bg-slate-100 text-slate-950 shadow-sm' : 'text-slate-700 hover:bg-slate-100',
+              )
+            }
+          >
+            <Settings className="h-5 w-5" />Setting
           </NavLink>
-        ))}
-      </nav>
 
-      <div className="mt-5 border-t border-slate-200 pt-5">
-        <NavLink to="/settings" onClick={onNavigate} className={({ isActive }) => cn('inline-flex h-11 w-full items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all', isActive ? 'bg-slate-100 text-slate-950 shadow-sm' : 'text-slate-700 hover:bg-slate-100')}>
-          <Settings className="h-5 w-5" />Setting
-        </NavLink>
-        <NavLink to="/api" onClick={onNavigate} className={({ isActive }) => cn('mt-2 inline-flex h-11 w-full items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all', isActive ? 'bg-slate-100 text-slate-950 shadow-sm' : 'text-slate-700 hover:bg-slate-100')}>
-          <Braces className="h-5 w-5" />API
-        </NavLink>
+          <NavLink
+            to="/api"
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                'mt-2 inline-flex h-11 w-full items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all',
+                isActive ? 'bg-slate-100 text-slate-950 shadow-sm' : 'text-slate-700 hover:bg-slate-100',
+              )
+            }
+          >
+            <Braces className="h-5 w-5" />API
+          </NavLink>
+        </div>
       </div>
 
-      <Card className="mt-6 p-4 lg:mt-auto">
+      <Card className="mt-4 shrink-0 p-4">
         {items.map(([label, value, color]) => (
           <div key={label} className="mb-3 flex items-center justify-between text-sm">
-            <span className="flex items-center gap-3"><span className={cn('h-4 w-4 rounded', color)} />{label}</span>
+            <span className="flex items-center gap-3">
+              <span className={cn('h-4 w-4 rounded', color)} />
+              {label}
+            </span>
             <span className="font-semibold">{value}</span>
           </div>
         ))}
+
         <div className="mt-4 border-t border-slate-200 pt-4 text-sm">
-          <p><b>{formatBytes(storage?.usedBytes)}</b> used of <span className="text-slate-500">{formatBytes(storage?.totalBytes)}</span></p>
-          <div className="my-3 h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{ width: `${progress}%` }} /></div>
-          <Button variant="danger" className="mt-4 w-full justify-start" onClick={onLogout}><LogOut className="h-5 w-5" />Log Out</Button>
+          <p>
+            <b>{formatBytes(storage?.usedBytes)}</b> used of <span className="text-slate-500">{formatBytes(storage?.totalBytes)}</span>
+          </p>
+          <div className="my-3 h-1.5 rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-blue-600" style={{ width: `${progress}%` }} />
+          </div>
+          <Button variant="danger" className="mt-4 w-full justify-start" onClick={onLogout}>
+            <LogOut className="h-5 w-5" />Log Out
+          </Button>
         </div>
       </Card>
     </aside>
@@ -210,14 +272,16 @@ export function DriveLayout() {
         headers: { Accept: 'application/vnd.github+json' },
       })
       if (!response.ok) throw new Error(response.status === 403 ? 'GitHub rate limit reached. Try again later.' : 'Failed to load repository updates.')
-      const commits = await response.json() as GitHubCommit[]
-      setUpdates(commits.map((item) => ({
-        sha: item.sha.slice(0, 7),
-        title: item.commit.message.split('\n')[0] || 'Repository update',
-        author: item.commit.author?.name ?? 'GitHub',
-        date: item.commit.author?.date ? formatDate(item.commit.author.date) : '--',
-        url: item.html_url,
-      })))
+      const commits = (await response.json()) as GitHubCommit[]
+      setUpdates(
+        commits.map((item) => ({
+          sha: item.sha.slice(0, 7),
+          title: item.commit.message.split('\n')[0] || 'Repository update',
+          author: item.commit.author?.name ?? 'GitHub',
+          date: item.commit.author?.date ? formatDate(item.commit.author.date) : '--',
+          url: item.html_url,
+        })),
+      )
       setUpdatesLoaded(true)
     } catch (error) {
       setUpdatesError(error instanceof Error ? error.message : 'Failed to load repository updates.')
@@ -238,6 +302,7 @@ export function DriveLayout() {
         updateStoredUser(data.user)
       })
       .catch(() => undefined)
+
     loadSidebarStats().catch(() => undefined)
     window.addEventListener('9drive:storage-changed', loadSidebarStats)
     return () => window.removeEventListener('9drive:storage-changed', loadSidebarStats)
@@ -254,10 +319,12 @@ export function DriveLayout() {
   return (
     <main className="min-h-screen w-full overflow-x-hidden bg-white">
       <div className="flex min-h-screen w-full flex-col bg-white lg:h-screen lg:overflow-hidden lg:flex-row">
-        <div className="hidden lg:block lg:h-screen lg:shrink-0">
+        <div className="hidden lg:block lg:h-screen lg:shrink-0 lg:overflow-hidden">
           <Sidebar user={user} storage={storage} breakdown={breakdown} onLogout={logout} />
         </div>
+
         <div className={cn('fixed inset-0 z-40 bg-slate-950/40 transition-opacity lg:hidden', sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0')} onClick={() => setSidebarOpen(false)} />
+
         <div className={cn('fixed inset-y-0 left-0 z-50 transform bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden', sidebarOpen ? 'translate-x-0' : '-translate-x-full')}>
           <div className="absolute right-4 top-4 z-10">
             <Button variant="outline" size="icon" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)}>
@@ -266,6 +333,7 @@ export function DriveLayout() {
           </div>
           <Sidebar user={user} storage={storage} breakdown={breakdown} onLogout={logout} onNavigate={() => setSidebarOpen(false)} />
         </div>
+
         <section className="min-w-0 flex-1 p-4 sm:p-8 lg:h-screen lg:overflow-y-auto lg:p-10">
           <header className="flex w-full min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center justify-between gap-3 lg:hidden">
@@ -278,6 +346,7 @@ export function DriveLayout() {
                   <span className="truncate text-xl font-extrabold tracking-tight">9Drive</span>
                 </div>
               </div>
+
               <div className="relative shrink-0">
                 <Button variant="outline" size="icon" className="relative" aria-label="Repository updates" aria-expanded={updatesOpen} onClick={toggleRepoUpdates}>
                   <Bell className="h-5 w-5" />
@@ -286,11 +355,15 @@ export function DriveLayout() {
                 {updatesOpen ? <RepoUpdatesDropdown updates={updates} loading={updatesLoading} error={updatesError} /> : null}
               </div>
             </div>
+
             <form onSubmit={searchFiles} className="relative w-full min-w-0 flex-1 xl:max-w-xl">
               <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
               <Input value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="Search Documents" className="pl-11 pr-12" />
-              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500" aria-label="Search files"><SlidersHorizontal className="h-5 w-5" /></button>
+              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500" aria-label="Search files">
+                <SlidersHorizontal className="h-5 w-5" />
+              </button>
             </form>
+
             <div className="relative hidden flex-wrap gap-3 lg:flex">
               <Button variant="outline" size="icon" className="relative" aria-label="Repository updates" aria-expanded={updatesOpen} onClick={toggleRepoUpdates}>
                 <Bell className="h-5 w-5" />
@@ -299,6 +372,7 @@ export function DriveLayout() {
               {updatesOpen ? <RepoUpdatesDropdown updates={updates} loading={updatesLoading} error={updatesError} /> : null}
             </div>
           </header>
+
           <Outlet />
         </section>
       </div>
